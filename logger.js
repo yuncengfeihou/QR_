@@ -27,19 +27,34 @@ export function log(message, ...data) {
     let dataString = '';
     if (data.length > 0) {
         try {
-            // 使用 replacer 函数处理复杂对象，避免循环引用
             const cache = new Set();
-            dataString = data.map(d => JSON.stringify(d, (key, value) => {
+            const replacer = (key, value) => {
+                // 1. 避免循环引用
                 if (typeof value === 'object' && value !== null) {
                     if (cache.has(value)) {
-                        // Circular reference found, discard key
                         return '[Circular Reference]';
                     }
-                    // Store value in our collection
                     cache.add(value);
                 }
+
+                // 2. 摘要化 DOM 元素
+                if (value && typeof value.tagName === 'string') {
+                    return `[HTMLElement <${value.tagName.toLowerCase()} id='${value.id}' class='${value.className}'>]`;
+                }
+
+                // 3. 截断特别长的字符串，尤其是脚本内容
+                if (typeof value === 'string' && value.length > 300) {
+                    // 对JSR脚本内容进行特殊标记
+                    if (key === 'content') {
+                        return `[Script content, length: ${value.length}]`;
+                    }
+                    return value.substring(0, 300) + '...[truncated]';
+                }
+
                 return value;
-            }, 2)).join('\n');
+            };
+            dataString = data.map(d => JSON.stringify(d, replacer, 2)).join('\n');
+
         } catch (error) {
             dataString = `[Error serializing data: ${error.message}]`;
         }
