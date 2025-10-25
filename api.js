@@ -79,6 +79,22 @@ function flattenJsrScripts(items) {
 }
 
 /**
+ * 创建 JSR 脚本的摘要信息，避免记录完整脚本内容。
+ * @param {Array<object>} scripts - 脚本对象数组.
+ * @returns {Array<object>} - 只包含关键信息的脚本摘要数组.
+ */
+function createScriptSummary(scripts) {
+    if (!Array.isArray(scripts)) return [];
+    return scripts.map(script => ({
+        id: script.id,
+        name: script.name,
+        enabled: script.enabled,
+        button_count: script.buttons?.length || 0,
+        content_length: script.content?.length || 0,
+    }));
+}
+
+/**
  * Fetches chat, character, and global quick replies, applying priority rules.
  * Also fetches JS Runner buttons directly from its settings.
  * Priority: Chat > Character > Global.
@@ -144,7 +160,7 @@ export function fetchQuickReplies() {
         if (jsrGlobalSettings?.script?.scripts) {
             const flattenedGlobal = flattenJsrScripts(jsrGlobalSettings.script.scripts);
             allScripts.push(...flattenedGlobal);
-            logger.log('Found and flattened global JSR scripts:', { count: flattenedGlobal.length, data: flattenedGlobal });
+            logger.log('Found and flattened global JSR scripts:', { count: flattenedGlobal.length, summary: createScriptSummary(flattenedGlobal) });
         }
 
         const presetName = stContext.presetName;
@@ -153,7 +169,7 @@ export function fetchQuickReplies() {
             if (presetJsrSettings?.scripts) {
                 const flattenedPreset = flattenJsrScripts(presetJsrSettings.scripts);
                 allScripts.push(...flattenedPreset);
-                logger.log(`Found and flattened JSR scripts from preset '${presetName}':`, { count: flattenedPreset.length, data: flattenedPreset });
+                logger.log(`Found and flattened JSR scripts from preset '${presetName}':`, { count: flattenedPreset.length, summary: createScriptSummary(flattenedPreset) });
             }
         }
 
@@ -175,7 +191,7 @@ export function fetchQuickReplies() {
                 if (characterSettingsObject?.scripts) {
                     const flattenedChar = flattenJsrScripts(characterSettingsObject.scripts);
                     allScripts.push(...flattenedChar);
-                    logger.log('Found and flattened character JSR scripts:', { count: flattenedChar.length, data: flattenedChar });
+                    logger.log('Found and flattened character JSR scripts:', { count: flattenedChar.length, summary: createScriptSummary(flattenedChar) });
                 }
             }
         }
@@ -206,7 +222,13 @@ export function fetchQuickReplies() {
     } else if (jsRunnerSettings && jsRunnerSettings.enabled_extension !== false) {
         // --- PATH B: 回退到旧版手动解析设置的逻辑 (保持原始逻辑不变) ---
         logger.log(`[JSR] Tavern Helper API not found. Falling back to legacy settings parsing (Path B).`);
-        logger.log('Legacy JSR settings object:', jsRunnerSettings);
+        const settingsSummary = {
+            enabled: jsRunnerSettings.enabled_extension,
+            global_enabled: jsRunnerSettings.script?.global_script_enabled,
+            repo_count: jsRunnerSettings.script?.scriptsRepository?.length || 0,
+            char_scripts_list: jsRunnerSettings.script?.characters_with_scripts,
+        };
+        logger.log('Legacy JSR settings object (Summary):', settingsSummary);
 
         const processScripts = (scripts) => {
             if (!scripts || !Array.isArray(scripts)) return;
@@ -260,7 +282,12 @@ export function fetchQuickReplies() {
     if (window.XBTasks && typeof window.XBTasks.dump === 'function') {
         try {
             const lwbTasks = window.XBTasks.dump('all');
-            logger.log('Found LWB tasks:', lwbTasks);
+            const lwbSummary = {
+                character_tasks: lwbTasks.character?.map(t => t.name) || [],
+                global_tasks: lwbTasks.global?.map(t => t.name) || [],
+                preset_tasks: lwbTasks.preset?.map(t => t.name) || [],
+            };
+            logger.log('Found LWB tasks (Summary):', lwbSummary);
             const processLwbTasks = (tasks, scope, destinationList) => {
                 if (!Array.isArray(tasks)) return;
                 tasks.forEach(task => {
