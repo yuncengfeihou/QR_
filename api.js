@@ -141,7 +141,7 @@ export function fetchQuickReplies() {
     logger.log('After QRv2 processing:', { chatReplies: finalChatReplies.length, globalReplies: finalGlobalReplies.length });
 
     // --- 2. 获取并处理 Tavern Helper / JSR 按钮 ---
-    const jsRunnerSettings = stContext?.extensionSettings?.[JSR_SETTINGS_KEY];
+    const jsRunnerSettings = stContext?.extensionSettings?.[JSR_SETTINGS_KEY] || stContext?.extensionSettings?.[JSR_DATA_KEY];
     const newApi = (typeof TavernHelper !== 'undefined' && TavernHelper.getAllEnabledScriptButtons) ||
                    (stContext?.TavernHelper && stContext.TavernHelper.getAllEnabledScriptButtons);
 
